@@ -1,5 +1,8 @@
-from jabberbot import JabberBot, botcmd
 from chatterbotapi import ChatterBotFactory, ChatterBotType
+from ConfigParser import ConfigParser
+from jabberbot import JabberBot, botcmd
+import logging
+
 
 class SpaceBot(JabberBot):
 
@@ -29,14 +32,20 @@ class SpaceBot(JabberBot):
 
 
 if __name__ == '__main__':
-    username = 'horscht@terminal21.de'
-    password = ''
-    chatroom = 'discuss@conference.terminal21.de'
+    logging.basicConfig(level=logging.DEBUG)
+
+    config = ConfigParser()
+    config.read('etc/spacebot.ini')
+    username = str(config.get('spacebot', 'username'))
+    password = config.get('spacebot', 'password')
+    chatroom = config.get('spacebot', 'chatroom')
 
     factory = ChatterBotFactory()
-    cbot = factory.create(ChatterBotType.CLEVERBOT)
-    csession = cbot.create_session()
+    cleverbot = factory.create(ChatterBotType.CLEVERBOT)
+    cleversession = cleverbot.create_session()
 
-    bot = SpaceBot(csession, username, password)
-    bot.join_room(chatroom)
-    bot.serve_forever()
+    print dir(username)
+    print dir(password)
+    spacebot = SpaceBot(cleversession, username, password)
+    spacebot.join_room(chatroom)
+    spacebot.serve_forever()
