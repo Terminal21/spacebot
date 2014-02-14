@@ -149,10 +149,12 @@ class SpaceMessageRecvr(Thread):
 
 #if __name__ == '__main__':
 def run():
-    logging.basicConfig(level=logging.DEBUG)
+    logformat = "%(asctime)s %(levelname)s [%(name)s][%(threadName)s] %(message)s"
+    logging.basicConfig(format=logformat, level=logging.DEBUG)
 
     config = ConfigParser()
     config.read('etc/spacebot.ini')
+
     username = config.get('spacebot', 'username')
     password = config.get('spacebot', 'password')
     chatroom = config.get('spacebot', 'chatroom')
