@@ -93,12 +93,12 @@ class SpaceBotStatus(SpaceStatus):
     changed = False
 
     def update(self, spacemessage):
-        if hasattr(spacemessage, 'spaceopen'):
-            spacemessage.spaceopen = bool(spacemessage.spaceopen)
-            if not self.spaceopen == spacemessage.spaceopen:
+        if 'spaceopen' in spacemessage:
+            spacemessage['spaceopen'] = bool(spacemessage['spaceopen'])
+            if not self.spaceopen == spacemessage['spaceopen']:
+                self.spaceopen = spacemessage['spaceopen']
                 logging.info('SpaceBotStatus spaceopen changed to {}'.format(
-                    spacemessage.spaceopen))
-                self.spaceopen = spacemessage.spaceopen
+                    self.spaceopen))
                 self.changed = True
 
         if self.changed:
@@ -135,7 +135,7 @@ class SpaceMessageRecvr(Thread):
         logging.info('starting zeromq subscription')
         while self._continue:
             try:
-                message = self.subscriber.recv_pyobj()
+                message = self.subscriber.recv_json()
                 logging.info('receving zeromq message {}'.format(str(message)))
                 self.listener.update(message)
             except Exception as e:
