@@ -26,7 +26,7 @@ class SpaceBot(JabberBot):
 
         self.messages = Queue()
 
-    def quit(self)
+    def quit(self):
         self.connect().reconnectAndReauth()
 
     def idle_proc(self):
