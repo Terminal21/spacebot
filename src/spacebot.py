@@ -10,6 +10,9 @@ import zmq
 
 class SpaceBot(JabberBot):
 
+    PING_FREQUENCY = 60 # XMPP Ping every X seconds
+    PING_TIMEOUT = 2 # Ping timeout
+
     def __init__(self, chatroom, *args, **kargs):
         logging.debug('SpaceBot initialized')
         super(SpaceBot, self).__init__(*args, **kargs)
@@ -22,6 +25,9 @@ class SpaceBot(JabberBot):
 #        self.cleversession = cleverbot.create_session()
 
         self.messages = Queue()
+
+    def quit(self)
+        self.connect().reconnectAndReauth()
 
     def idle_proc(self):
         try:
@@ -116,7 +122,7 @@ class SpaceMessageRecvr(Thread):
     _continue = True
 
     def __init__(self, listener):
-        Thread.__init__(self) 
+        Thread.__init__(self)
         self.daemon = True
 
         config = ConfigParser()
