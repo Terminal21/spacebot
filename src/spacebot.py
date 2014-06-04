@@ -6,6 +6,7 @@ from Queue import Empty, Queue
 from exceptions import Exception
 import logging
 import zmq
+import time
 
 
 class SpaceBot(JabberBot):
@@ -167,3 +168,7 @@ def run():
         spacebot.status = spacestatus
         while True:
             spacebot.serve_forever()
+            time.sleep(20)
+
+            # fix bug in jabberbot
+            spacebot.__finished = False
