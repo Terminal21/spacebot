@@ -26,10 +26,6 @@ class SpaceBot(JabberBot):
 
         self.messages = Queue()
 
-    def quit(self):
-        logging.info('lost connection, try to reconnect')
-        self.connect().reconnectAndReauth()
-
     def idle_proc(self):
         try:
             message = self.messages.get_nowait()
@@ -169,4 +165,5 @@ def run():
     spacebot = SpaceBot(chatroom, username, password)
     with SpaceBotStatus(spacebot) as spacestatus:
         spacebot.status = spacestatus
-        spacebot.serve_forever()
+        while True:
+            spacebot.serve_forever()
