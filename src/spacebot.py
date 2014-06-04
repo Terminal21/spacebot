@@ -37,6 +37,11 @@ class SpaceBot(JabberBot):
         #self.send(self.chatroom, message, message_type='groupchat')
         self.broadcast(message)
 
+    def serve_forever(self):
+        self.conn = None
+        self.__finished = False
+        super(SpaceBot, self).serve_forever()
+
     def say(self, message):
         self.messages.put(message)
 
@@ -169,6 +174,3 @@ def run():
         while True:
             spacebot.serve_forever()
             time.sleep(20)
-
-            # fix bug in jabberbot
-            spacebot.__finished = False
