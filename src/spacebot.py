@@ -39,7 +39,7 @@ class SpaceBot(JabberBot):
 
     def serve_forever(self):
         self.conn = None
-        self.__finished = False
+        self._JabberBot__finished = False
         super(SpaceBot, self).serve_forever()
 
     def say(self, message):
