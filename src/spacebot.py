@@ -6,6 +6,7 @@ from Queue import Empty, Queue
 from exceptions import Exception
 import logging
 import zmq
+import time
 
 
 class SpaceBot(JabberBot):
@@ -26,10 +27,6 @@ class SpaceBot(JabberBot):
 
         self.messages = Queue()
 
-    def quit(self):
-        logging.info('lost connection, try to reconnect')
-        self.connect().reconnectAndReauth()
-
     def idle_proc(self):
         try:
             message = self.messages.get_nowait()
@@ -39,6 +36,11 @@ class SpaceBot(JabberBot):
             message, self.chatroom))
         #self.send(self.chatroom, message, message_type='groupchat')
         self.broadcast(message)
+
+    def serve_forever(self):
+        self.conn = None
+        self._JabberBot__finished = False
+        super(SpaceBot, self).serve_forever()
 
     def say(self, message):
         self.messages.put(message)
@@ -170,4 +172,6 @@ def run():
     spacebot = SpaceBot(chatroom, username, password)
     with SpaceBotStatus(spacebot) as spacestatus:
         spacebot.status = spacestatus
-        spacebot.serve_forever()
+        while True:
+            spacebot.serve_forever()
+            time.sleep(20)
