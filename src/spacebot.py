@@ -1,12 +1,47 @@
-#from chatterbotapi import ChatterBotFactory, ChatterBotType
+import cgi
+from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+import os
+import os.path
+from threading import Thread
 from ConfigParser import ConfigParser
 from jabberbot import JabberBot, botcmd
 from threading import Thread
+import threading
 from Queue import Empty, Queue
 from exceptions import Exception
 import logging
-import zmq
 import time
+
+def touch(fname):
+    open(fname, 'a').close()
+    os.utime(fname, None)
+
+
+class SpaceApiHandler(BaseHTTPRequestHandler):
+
+    def do_POST(self):
+        global spacebot
+        print 'POST' 
+        form = cgi.FieldStorage(
+            fp=self.rfile,
+            headers=self.headers,
+            environ={'REQUEST_METHOD':'POST',
+                     'CONTENT_TYPE':self.headers['Content-Type'],
+                     })
+        status = form.getvalue('status')
+        spacebot.spacebotstatus.update(status)        
+        self.respond("""asdf""")
+
+    def do_GET(self):
+        self.respond("""geh weg""")
+
+    def respond(self, response, status=200):
+        self.send_response(status)
+        self.send_header("Content-type", "text/html")
+        self.send_header("Content-length", len(response))
+        self.end_headers()
+        self.wfile.write(response)
+
 
 
 class SpaceBot(JabberBot):
@@ -17,14 +52,8 @@ class SpaceBot(JabberBot):
     def __init__(self, chatroom, *args, **kargs):
         logging.debug('SpaceBot initialized')
         super(SpaceBot, self).__init__(*args, **kargs)
-
+        self.spacebotstatus = SpaceBotStatus(self)
         self.chatroom = chatroom
-#        self.join_room(self.chatroom)
-
-#        factory = ChatterBotFactory()
-#        cleverbot = factory.create(ChatterBotType.CLEVERBOT)
-#        self.cleversession = cleverbot.create_session()
-
         self.messages = Queue()
 
     def idle_proc(self):
@@ -45,24 +74,11 @@ class SpaceBot(JabberBot):
     def say(self, message):
         self.messages.put(message)
 
-#    def unknown_command(self, mess, cmd, args):
-#        question = mess.getBody()
-#        question = question.encode("utf8")
-#        node = str(mess.getFrom()).split('/')[1]
-#        if (node=='horscht'):
-#                return None
-#
-#        try:
-#            answ = self.cleversession.think(question)
-#        except:
-#            return None
-#        return answ
-
     @botcmd
     def status(self, mess, args):
         """Status of the hackspace"""
         return "Der Space ist im Moment {}".format(
-            "offen" if self.status.spaceopen else "zu")
+            "offen" if self.spacebotstatus.spaceopen else "zu")
 
     @botcmd
     def more(self, mess, args):
@@ -74,45 +90,28 @@ class SpaceBot(JabberBot):
                   jabber muc:\tdiscuss@conference.terminal21.de"""
 
 
-class SpaceMessage(object):
-
-    def __init__(self, spaceopen = None):
-        self.spaceopen = spaceopen
 
 
-class SpaceStatus(object):
-
-    def __init__(self, listener):
-        self.listener = listener
-        self.spacemrecvr = SpaceMessageRecvr(self)
-        self.spacemrecvr.start()
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, type, value, traceback):
-        self.spacemrecvr.stop()
-
-    def update(self, spacemessage):
-        pass
-
-
-class SpaceBotStatus(SpaceStatus):
+class SpaceBotStatus(object):
+    current_status = 'closed'
     spaceopen = False
-    changed = False
 
-    def update(self, spacemessage):
-        if 'spaceopen' in spacemessage:
-            spacemessage['spaceopen'] = bool(spacemessage['spaceopen'])
-            if not self.spaceopen == spacemessage['spaceopen']:
-                self.spaceopen = spacemessage['spaceopen']
-                logging.info('SpaceBotStatus spaceopen changed to {}'.format(
-                    self.spaceopen))
-                self.changed = True
+    def __init__(self, bot):
+        self.listener = bot
+        if os.path.isfile('spaceopen'):
+            self.current_status = 'open'
+            self.spaceopen = True
 
-        if self.changed:
+    def update(self, status):
+        if status != self.current_status:
+            if 'open' in status:
+                self.spaceopen = True
+                touch('spaceopen')
+            else:
+                self.spaceopen = False
+                os.unlink('spaceopen')
             self.notify()
-            self.changed = False
+            self.current_status = status
 
     def notify(self):
         self.listener.say('Der Space ist jetzt {}'.format(
@@ -120,45 +119,8 @@ class SpaceBotStatus(SpaceStatus):
 
 
 
-class SpaceMessageRecvr(Thread):
-
-    _continue = True
-
-    def __init__(self, listener):
-        Thread.__init__(self)
-        self.daemon = True
-
-        config = ConfigParser()
-        config.read('etc/spacebot.ini')
-        publisher = config.get('zeromq', 'publisher')
-
-        logging.debug('SpaceMessageRecvr initialized')
-        self.listener = listener
-
-        zcontext = zmq.Context()
-        self.subscriber = zcontext.socket(zmq.SUB)
-        self.subscriber.connect(publisher)
-        self.subscriber.setsockopt(zmq.SUBSCRIBE, '')
-        self.subscriber.setsockopt(zmq.RCVTIMEO, 120000)
-
-    def run(self):
-        logging.info('starting zeromq subscription')
-        while self._continue:
-            try:
-                message = self.subscriber.recv_json()
-                logging.info('receving zeromq message {}'.format(str(message)))
-                self.listener.update(message)
-            except Exception as e:
-                logging.error(e)
-
-    def stop(self):
-        self.__continue = False
-        self.subscriber.close()
-        logging.info('stopping zeromq subscription')
-
-
-#if __name__ == '__main__':
 def run():
+    global spacebot
     logformat = "%(asctime)s %(levelname)s [%(name)s][%(threadName)s] %(message)s"
     logging.basicConfig(format=logformat, level=logging.DEBUG)
 
@@ -170,8 +132,11 @@ def run():
     chatroom = config.get('spacebot', 'chatroom')
 
     spacebot = SpaceBot(chatroom, username, password)
-    with SpaceBotStatus(spacebot) as spacestatus:
-        spacebot.status = spacestatus
-        while True:
-            spacebot.serve_forever()
-            time.sleep(20)
+    server = HTTPServer(('', 8889), SpaceApiHandler)
+    thread = threading.Thread(target=server.serve_forever)
+    thread.daemon = True
+    thread.start()
+
+    while True:
+        spacebot.serve_forever()
+        time.sleep(20)
