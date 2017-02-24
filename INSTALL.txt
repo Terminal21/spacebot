@@ -1,0 +1,5 @@
+virtualenv .
+git clone https://github.com/ArchipelProject/xmpppy.git
+bin/pip install xmpppy
+bin/python bootstrap.py
+bin/buildout
