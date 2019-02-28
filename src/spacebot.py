@@ -67,8 +67,9 @@ class SpaceBotStatus(object):
 
     def notify(self):
         msg = 'true' if self.spaceopen else 'false'
+        mqttc.connect('localhost')
         self.mqttc.publish('space/status/open', msg)
-
+        mqttc.disconnect()
 
 
 def run():
@@ -80,7 +81,6 @@ def run():
     config.read('etc/spacebot.ini')
 
     mqttc = mqtt.Client()
-    mqttc.connect('localhost')
 
 
     spacebotstatus = SpaceBotStatus(mqttc)
